@@ -5,7 +5,7 @@
         <ul class="inputs-list">
         {% for choice, key, checked in qdict.choices %}
             <li>
-                <label>
+                <label class="checkbox">
                     <input onClick="valchanged('{{ question.number }}_{{ choice.value }}', this.checked);" type="checkbox" id="{{ key }}" name="{{ key }}" value="{{ choice.value }}" {{ checked }}>
                     <span>{{ choice.text }}</span>
                 </label>
