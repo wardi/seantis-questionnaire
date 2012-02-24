@@ -120,14 +120,4 @@ input.sending {
             transition: 0.3s linear all !important;   
 }
 
-
-/* Below are various ports from bootsrap 1 that make the questionnaire look good on bootstrap 2, until I refactor the widgets to look good with bootstrap 2 by default - DZ */
-/*.inputs-list{margin:0 0 5px;width:100%;}.inputs-list li{display:block;padding:0;width:100%;}
-.inputs-list label{display:block;float:none;width:auto;padding:0;margin-left:20px;line-height:18px;text-align:left;white-space:normal;}.inputs-list label strong{color:#808080;}
-.inputs-list label small{font-size:11px;font-weight:normal;}
-.inputs-list .inputs-list{margin-left:25px;margin-bottom:10px;padding-top:0;}
-.inputs-list:first-child{padding-top:6px;}
-.inputs-list li+li{padding-top:2px;}
-.inputs-list input[type=radio],.inputs-list input[type=checkbox]{margin-bottom:0;margin-left:-20px;float:left;}*/
-
 .inputs-list{margin:0 0 5px;width:100%;}.inputs-list li{display:block;padding:0;width:100%;}
