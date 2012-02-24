@@ -3,10 +3,12 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <title>{% block title %}Questionnaire{% endblock title %}</title>
     
-    <link rel="stylesheet" href="/static/bootstrap/bootstrap.min.css" type="text/css"/>
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.css" type="text/css"/>
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap-responsive.css" type="text/css"/>
     <link rel="stylesheet" href="/static/questionnaire.css"></script>
     
     <style type="text/css">
@@ -40,9 +42,9 @@
                 <h1>Sample Django Questionnaire</h1>
             </div>
 
-            <div class="row">
+            <div class="row-fluid">
                 <div class="span1">&nbsp;</div>
-                <div class="span14">
+                <div class="span10">
                     {% block content %}
                     <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud execitation ullamco laboris nisi ut aliquip ex ea commodo consequat.  Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
                     {% endblock %}
