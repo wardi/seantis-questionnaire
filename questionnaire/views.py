@@ -902,6 +902,12 @@ def dep_check(expr, runinfo, answerdict):
     
     if actual_answer is None:
         actual_answer = u''
+    elif isinstance(actual_answer, list):
+        # answer is freeform text, for the purpose of checks treat
+        # it like an empty answer.
+        # (comparing with predefined values would lead to madness)
+        actual_answer = u''
+
     if check_answer[0:1] in "<>":
         try:
             actual_answer = float(actual_answer)
