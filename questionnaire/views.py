@@ -37,6 +37,32 @@ def get_runinfo(random):
     res = RunInfo.objects.filter(random=random.lower())
     return res and res[0] or None
 
+
+def create_test_run(runcode, qs):
+    "Create a throw-away Subject and RunInfo for testing questions"
+    if not runcode.startswith('test:'):
+        return None
+
+    try:
+        questionnaire_id = int(runcode[5:])
+    except ValueError:
+        return None
+
+    q = Questionnaire.objects.filter(pk=questionnaire_id)
+    if not q:
+        return None
+    questionsets = q[0].questionsets()
+    if qs is not None:
+        questionsets = questionsets.filter(sortid=int(qs))
+    if not questionsets:
+        return None
+
+    s = Subject.objects.create() # XXX: delete these somewhere afterwards
+    runinfo = RunInfo(subject=s, questionset=questionsets[0], random=runcode)
+    runinfo.save()
+    return runinfo
+
+
 def get_question(number, questionnaire):
     "Return the specified Question (by number) from the specified Questionnaire"
     res = Question.objects.filter(number=number, questionset__questionnaire=questionnaire)
@@ -279,6 +305,9 @@ def questionnaire(request, runcode=None, qs=None):
             return HttpResponseRedirect(reverse("questionnaire",args=[runcode]))
 
     runinfo = get_runinfo(runcode)
+    if not runinfo and request.user.has_perm('questionnaire.create_question'):
+        # auto-create test runs for admin users
+        runinfo = create_test_run(runcode, qs)
 
     if not runinfo:
         transaction.commit()
