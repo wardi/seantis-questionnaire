@@ -64,7 +64,22 @@ class Subject(models.Model):
         return RunInfo.objects.filter(subject=self).order_by('runid')
 
 
+class QuestionnaireManager(models.Manager):
+    def create_from_json_data(self, data, schema_version=1):
+        """
+        Create a new Questionnaire including all QuestionSets, Questions and
+        Choices using previously exported questionnaire data.
+        """
+        support_only_versions(schema_version, (1,))
+        q = self.create(**dict_filter_keys(data, ('name', 'redirect_url')))
+        for qus_data in data['questionsets']:
+            QuestionSet.objects.create_from_json_data(
+                qus_data, schema_version, questionnaire=q,)
+        return q
+
+
 class Questionnaire(models.Model):
+    objects = QuestionnaireManager()
     name = models.CharField(max_length=128)
     redirect_url = models.CharField(max_length=128, help_text="URL to redirect to when Questionnaire is complete. Macros: $SUBJECTID, $RUNID, $LANG", default="/static/complete.html")
 
@@ -83,8 +98,30 @@ class Questionnaire(models.Model):
             ("management", "Management Tools")
         )
 
+    def dump_json_data(self, schema_version=1):
+        support_only_versions(schema_version, (1,))
+        return dict(
+            questionsets=[qus.dump_json_data(schema_version)
+                for qus in self.questionsets()],
+            **attrs_to_dict(self, ('name', 'redirect_url')))
+
+
+class QuestionSetManager(models.Manager):
+    def create_from_json_data(self, data, schema_version=1, questionnaire=None):
+        support_only_versions(schema_version, (1,))
+        # FIXME: support multiple languages in 'text'
+        qus = self.create(
+            questionnaire=questionnaire,
+            **dict_filter_keys(data, ('sortid', 'heading', 'checks', 'text')))
+        for qu_data in data['questions']:
+            Question.objects.create_from_json_data(
+                qu_data, schema_version, questionset=qus)
+        return qus
+
+
 class QuestionSet(models.Model):
     __metaclass__ = TransMeta
+    objects = QuestionSetManager()
 
     "Which questions to display on a question page"
     questionnaire = models.ForeignKey(Questionnaire)
@@ -137,6 +174,14 @@ class QuestionSet(models.Model):
 
     class Meta:
         translate = ('text',)
+
+    def dump_json_data(self, schema_version=1):
+        support_only_versions(schema_version, (1,))
+        # FIXME: support multiple languages in 'text'
+        return dict(
+            questions=[qu.dump_json_data(schema_version)
+                for qu in self.questions()],
+            **attrs_to_dict(self, ('sortid', 'heading', 'checks', 'text')))
 
 
 class RunInfo(models.Model):
@@ -233,8 +278,24 @@ class RunInfoHistory(models.Model):
     class Meta:
         verbose_name_plural = 'Run Info History'
 
+
+class QuestionManager(models.Manager):
+    def create_from_json_data(self, data, schema_version=1, questionset=None):
+        support_only_versions(schema_version, (1,))
+        # FIXME: support multiple languages in 'text', 'extra'
+        qu = self.create(
+            questionset=questionset,
+            **dict_filter_keys(data,
+                ('number', 'text', 'type', 'extra', 'checks')))
+        for ch_data in data['choices']:
+            Choice.objects.create_from_json_data(
+                ch_data, schema_version, question=qu)
+        return qu
+
+
 class Question(models.Model):
     __metaclass__ = TransMeta
+    objects = QuestionManager()
 
     questionset = models.ForeignKey(QuestionSet)
     number = models.CharField(max_length=8, help_text=
@@ -332,9 +393,28 @@ class Question(models.Model):
     class Meta:
         translate = ('text', 'extra', 'footer')
 
+    def dump_json_data(self, schema_version=1):
+        support_only_versions(schema_version, (1,))
+        # FIXME: support multiple languages in 'text', 'extra'
+        return dict(
+            choices=[ch.dump_json_data(schema_version)
+                for ch in self.choice_set.order_by('sortid')],
+            **attrs_to_dict(self,
+                ('number', 'text', 'type', 'extra', 'checks')))
+
+
+class ChoiceManager(models.Manager):
+    def create_from_json_data(self, data, schema_version=1, question=None):
+        support_only_versions(schema_version, (1,))
+        # FIXME: support multiple languages in 'text'
+        return self.create(
+            question=question,
+            **dict_filter_keys(data, ('sortid', 'value', 'text')))
+
 
 class Choice(models.Model):
     __metaclass__ = TransMeta
+    objects = ChoiceManager()
 
     question = models.ForeignKey(Question)
     sortid = models.IntegerField()
@@ -346,6 +426,11 @@ class Choice(models.Model):
 
     class Meta:
         translate = ('text',)
+
+    def dump_json_data(self, schema_version=1):
+        support_only_versions(schema_version, (1,))
+        # FIXME: support multiple languages in 'text'
+        return attrs_to_dict(self, ('sortid', 'value', 'text'))
 
 
 class Answer(models.Model):
@@ -387,3 +472,17 @@ class Answer(models.Model):
     def check_answer(self):
         "Confirm that the supplied answer matches what we expect"
         return True
+
+
+# Utility functions for json data import/export methods above
+
+def attrs_to_dict(obj, names):
+    return dict((n, getattr(obj, n)) for n in names)
+
+def dict_filter_keys(d, keys):
+    return dict((n, d[n]) for n in keys)
+
+def support_only_versions(schema_version, versions):
+    if schema_version not in versions:
+        raise NotImplementedError("schema version not supported: %r" %
+            schema_version)
