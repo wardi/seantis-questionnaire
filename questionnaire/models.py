@@ -1,5 +1,5 @@
 from django.db import models
-from transmeta import TransMeta
+from transmeta import TransMeta, get_real_fieldname
 from django.utils.translation import ugettext_lazy as _
 from questionnaire import QuestionChoices
 import re
@@ -112,7 +112,9 @@ class QuestionSetManager(models.Manager):
         # FIXME: support multiple languages in 'text'
         qus = self.create(
             questionnaire=questionnaire,
-            **dict_filter_keys(data, ('sortid', 'heading', 'checks', 'text')))
+            **dict_filter_keys_transmeta(data,
+                keys=('sortid', 'heading', 'checks', 'text'),
+                translate_keys=('text',)))
         for qu_data in data['questions']:
             Question.objects.create_from_json_data(
                 qu_data, schema_version, questionset=qus)
@@ -285,8 +287,9 @@ class QuestionManager(models.Manager):
         # FIXME: support multiple languages in 'text', 'extra'
         qu = self.create(
             questionset=questionset,
-            **dict_filter_keys(data,
-                ('number', 'text', 'type', 'extra', 'checks')))
+            **dict_filter_keys_transmeta(data,
+                keys=('number', 'text', 'type', 'extra', 'checks'),
+                translate_keys=('text', 'extra')))
         for ch_data in data['choices']:
             Choice.objects.create_from_json_data(
                 ch_data, schema_version, question=qu)
@@ -409,7 +412,9 @@ class ChoiceManager(models.Manager):
         # FIXME: support multiple languages in 'text'
         return self.create(
             question=question,
-            **dict_filter_keys(data, ('sortid', 'value', 'text')))
+            **dict_filter_keys_transmeta(data,
+                keys=('sortid', 'value', 'text'),
+                translate_keys=('text',)))
 
 
 class Choice(models.Model):
@@ -481,6 +486,13 @@ def attrs_to_dict(obj, names):
 
 def dict_filter_keys(d, keys):
     return dict((n, d[n]) for n in keys)
+
+def dict_filter_keys_transmeta(d, keys, translate_keys):
+    default_language = getattr(settings, 'TRANSMETA_DEFAULT_LANGUAGE',
+        settings.LANGUAGE_CODE)
+    return dict(
+        (get_real_fieldname(n, default_language) if n in translate_keys else n,
+            d[n]) for n in keys)
 
 def support_only_versions(schema_version, versions):
     if schema_version not in versions:
